@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulir Pengujian Aplikasi (UAT) & Wawancara Multi-Responden</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate-100 */
+        }
+
+        /* Sembunyikan elemen mirror cetak pada tampilan layar biasa */
+        .print-only-text {
+            display: none;
+        }
+
+        /* Transisi halus untuk collapse/expand kartu formulir */
+        .form-body-content {
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Pengaturan khusus saat dicetak (Print / Save as PDF) */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 12mm 12mm 14mm 12mm;
+            }
+
+            body {
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 12px !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Pastikan semua formulir yang di-collapse otomatis terbuka penuh saat dicetak */
+            .form-body-content {
+                display: block !important;
+            }
+
+            /* Setiap formulir responden ke-2 dst. dimulai di halaman baru */
+            .respondent-form-wrapper:not(:first-child) {
+                page-break-before: always;
+                break-before: page;
+            }
+
+            /* Bagian Kesimpulan Akhir selalu dimulai di halaman baru */
+            .print-new-page {
+                page-break-before: always;
+                break-before: page;
+            }
+
+            .print-card {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .print-allow-break {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                break-inside: auto;
+                page-break-inside: auto;
+            }
+
+            /* Tampilkan teks penuh pengganti textarea saat print agar tidak terpotong scrollbar */
+            textarea.screen-textarea {
+                display: none !important;
+            }
+
+            .print-only-text {
+                display: block !important;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                min-height: 2.2rem;
+                padding: 0.5rem 0.75rem;
+                border: 1px solid #cbd5e1;
+                border-radius: 0.625rem;
+                background-color: #ffffff !important;
+                color: #1e293b !important;
+                font-size: 0.8125rem;
+                line-height: 1.45;
+            }
+
+            .print-only-text.is-empty {
+                color: #94a3b8 !important;
+                font-style: italic;
+            }
+
+            /* Memastikan warna radio button, badge, dan header tetap tercetak */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            input, select {
+                border-color: #cbd5e1 !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased py-6 px-3 sm:px-6 lg:px-8">
+
+    <!-- Toast Notifikasi (Pengganti alert() bawaan browser) -->
+    <div id="toast-container" class="no-print fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
+
+    <!-- Modal Konfirmasi Reset Semua (Pengganti confirm() bawaan browser) -->
+    <div id="reset-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all">
+            <div class="flex items-center gap-3 text-rose-600 mb-3">
+                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">Reset Semua Formulir UAT?</h3>
+            </div>
+            <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                Seluruh data dari semua formulir responden dan catatan tambahan penguji yang tersimpan di browser akan dihapus permanen. Pastikan Anda sudah mencetak atau menyimpan PDF jika diperlukan.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="cancel-reset-btn" class="px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                    Batal
+                </button>
+                <button type="button" id="confirm-reset-btn" class="px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-colors">
+                    Ya, Reset Semua
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus 1 Formulir -->
+    <div id="delete-form-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all">
+            <div class="flex items-center gap-3 text-rose-600 mb-3">
+                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">Hapus Formulir Responden?</h3>
+            </div>
+            <p id="delete-modal-desc" class="text-sm text-slate-600 mb-6 leading-relaxed">
+                Apakah Anda yakin ingin menghapus formulir responden ini? Data pada formulir ini tidak dapat dikembalikan.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="cancel-delete-btn" class="px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                    Batal
+                </button>
+                <button type="button" id="confirm-delete-btn" class="px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-colors">
+                    Ya, Hapus Formulir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kontainer Utama -->
+    <main class="max-w-4xl mx-auto print-container">
+
+        <!-- Header Banner Tema Emerald & Slate -->
+        <header class="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg mb-6 relative overflow-hidden print-card">
+            <!-- Aksen Dekoratif Emerald -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full -mr-20 -mt-20 pointer-events-none no-print"></div>
+            <div class="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/10 rounded-full -ml-16 -mb-16 pointer-events-none no-print"></div>
+
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold tracking-wide uppercase mb-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Quality Assurance & Evaluation
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                        Formulir Pengujian Aplikasi (UAT)
+                    </h1>
+                    <p class="text-slate-300 text-sm sm:text-base mt-1">
+                        Lembar Evaluasi Penerimaan Pengguna Akhir & Dokumentasi Wawancara Sistem
+                    </p>
+                </div>
+
+                <!-- Status Penyimpanan Otomatis & Jumlah Responden -->
+                <div class="flex flex-wrap items-center gap-2 self-start md:self-center">
+                    <div id="header-count-badge" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-xs font-semibold text-emerald-200">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span id="total-forms-badge-text">1 Responden</span>
+                    </div>
+                    <div id="storage-status" class="no-print inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Siap diisi</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Action Bar Sticky Atas (Disembunyikan saat print) -->
+        <div class="no-print bg-white/95 rounded-2xl p-3.5 sm:p-4 shadow-sm border border-slate-200/80 mb-6 flex flex-wrap items-center justify-between gap-3 sticky top-3 z-30 backdrop-blur-md">
+            <div class="flex items-center gap-2">
+                <button type="button" id="btn-add-form" class="px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-sm shadow-emerald-600/20 transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>Tambah Formulir</span>
+                </button>
+                <a href="#conclusion-section" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Lihat Kesimpulan
+                </a>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 justify-end">
+                <button type="button" id="btn-save" class="px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    Simpan Data
+                </button>
+                <button type="button" id="btn-reset" class="px-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reset Semua
+                </button>
+                <button type="button" id="btn-print" class="px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-sm transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Cetak / Export PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Kontainer Dinamis Multi-Formulir Responden -->
+        <div id="forms-container" class="space-y-8"></div>
+
+        <!-- Tombol Tambah Formulir Cepat di Bawah Daftar Formulir -->
+        <div class="no-print mt-6 flex justify-center">
+            <button type="button" id="btn-add-form-mid" class="w-full sm:w-auto px-6 py-3 text-sm font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Tambah Formulir Responden Baru</span>
+            </button>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- BAGIAN KESIMPULAN & ANALISIS KESELURUHAN (TAMPIL & DICETAK DI AKHIR) -->
+        <!-- ===================================================================== -->
+        <section id="conclusion-section" class="print-new-page mt-10 bg-white rounded-2xl shadow-md border border-slate-200/90 overflow-hidden print-allow-break">
+            <!-- Header Kesimpulan -->
+            <div class="bg-slate-900 text-white px-6 py-6 sm:px-8 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-56 h-56 bg-emerald-500/10 rounded-full -mr-16 -mt-16 pointer-events-none no-print"></div>
+                <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                            Laporan Ringkasan Otomatis
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-bold tracking-tight">
+                            Kesimpulan & Analisis Keseluruhan Pengujian (UAT)
+                        </h2>
+                        <p class="text-slate-300 text-xs sm:text-sm mt-1">
+                            Rekapitulasi otomatis berdasarkan seluruh formulir wawancara responden di atas
+                        </p>
+                    </div>
+                    <div id="conclusion-date-stamp" class="text-xs text-slate-300 bg-slate-800/90 border border-slate-700 px-3 py-2 rounded-xl self-start sm:self-center">
+                        Diperbarui real-time
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-8">
+
+                <!-- 1. Ringkasan Metrik (4 Kartu Statistik) -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+                        1. Ringkasan Metrik Responden
+                    </h3>
+                    <div id="summary-metrics-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <!-- Diisi otomatis oleh JavaScript -->
+                    </div>
+                </div>
+
+                <!-- 2. Narasi Ringkasan Eksekutif Otomatis -->
+                <div class="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 print-card">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+                        2. Ringkasan Eksekutif
+                    </h3>
+                    <div id="executive-narrative" class="text-sm text-slate-700 leading-relaxed space-y-2">
+                        <!-- Diisi otomatis oleh JavaScript -->
+                    </div>
+                </div>
+
+                <!-- 3. Rekapitulasi Jawaban per Aspek (Q1 - Q5) -->
+                <div class="print-card">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+                        3. Rekapitulasi Jawaban per Aspek Pengujian (Q1–Q5)
+                    </h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                    <th class="py-3 px-4 font-bold">Aspek Pengujian</th>
+                                    <th class="py-3 px-3 font-bold text-center text-emerald-700">Ya</th>
+                                    <th class="py-3 px-3 font-bold text-center text-amber-700">Sebagian</th>
+                                    <th class="py-3 px-3 font-bold text-center text-rose-700">Tidak</th>
+                                    <th class="py-3 px-4 font-bold text-right">Positif (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aspect-summary-tbody" class="divide-y divide-slate-200 bg-white">
+                                <!-- Diisi otomatis oleh JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. Rincian Alasan Responden Positif vs Negatif/Kendala -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+                        4. Rincian Penilaian & Alasan Responden
+                    </h3>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <!-- Kelompok Responden Positif -->
+                        <div class="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-5 print-allow-break">
+                            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-emerald-200/80">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
+                                    <h4 class="font-bold text-emerald-900 text-sm">Responden Positif & Alasannya</h4>
+                                </div>
+                                <span id="positive-group-count" class="px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">0</span>
+                            </div>
+                            <div id="positive-reasons-list" class="space-y-3 text-xs sm:text-sm">
+                                <!-- Diisi otomatis oleh JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Kelompok Responden Negatif / Perlu Perbaikan -->
+                        <div class="bg-rose-50/50 border border-rose-200/80 rounded-2xl p-5 print-allow-break">
+                            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-rose-200/80">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                        </svg>
+                                    </span>
+                                    <h4 class="font-bold text-rose-900 text-sm">Responden Negatif / Perlu Perbaikan & Alasannya</h4>
+                                </div>
+                                <span id="negative-group-count" class="px-2.5 py-0.5 text-xs font-bold bg-rose-100 text-rose-800 rounded-full">0</span>
+                            </div>
+                            <div id="negative-reasons-list" class="space-y-3 text-xs sm:text-sm">
+                                <!-- Diisi otomatis oleh JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Rangkuman Saran Perbaikan & Rekomendasi Sistem -->
+                <div class="space-y-5">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+                        5. Rangkuman Saran Perbaikan & Rekomendasi Sistem
+                    </h3>
+
+                    <!-- Daftar Saran dari Masing-Masing Responden -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 print-allow-break">
+                        <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
+                            Masukan & Saran Perbaikan dari Responden
+                        </h4>
+                        <div id="respondent-suggestions-list" class="space-y-2.5 text-xs sm:text-sm">
+                            <!-- Diisi otomatis oleh JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Rekomendasi Tindak Lanjut Otomatis -->
+                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 print-card">
+                        <h4 class="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            Rekomendasi Tindak Lanjut Otomatis
+                        </h4>
+                        <ul id="auto-recommendations-list" class="space-y-2 text-xs sm:text-sm text-slate-700 list-disc pl-5">
+                            <!-- Diisi otomatis oleh JavaScript -->
+                        </ul>
+                    </div>
+
+                    <!-- Catatan / Saran Tambahan Penguji (QA) -->
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 print-card">
+                        <label for="qa-additional-notes" class="block text-sm font-bold text-slate-800 mb-1">
+                            Catatan / Saran Tambahan Penguji (QA) <span class="text-xs font-normal text-slate-500">(Opsional)</span>
+                        </label>
+                        <p class="text-xs text-slate-500 mb-3 no-print">
+                            Tambahkan kesimpulan akhir, prioritas perbaikan, atau catatan penutup dari tim QA sebelum mencetak ke PDF.
+                        </p>
+                        <textarea id="qa-additional-notes" rows="3" placeholder="Tuliskan catatan penutup atau rekomendasi tambahan dari penguji (QA)..."
+                            class="screen-textarea w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all"></textarea>
+                        <div id="qa-additional-notes-print" class="print-only-text is-empty">Tidak ada catatan tambahan dari penguji.</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Kotak Petunjuk (Sembunyikan saat print) -->
+        <aside class="no-print mt-6 bg-emerald-50/80 border-l-4 border-emerald-600 rounded-r-2xl rounded-l-md p-4 sm:p-5 shadow-sm">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <strong class="font-bold text-slate-900">Petunjuk:</strong> Gunakan tombol <strong class="font-semibold text-emerald-700">+ Tambah Formulir</strong> untuk menambahkan lembar evaluasi responden baru. Seluruh isian tersimpan otomatis di browser (<code>localStorage</code>) dan bagian <strong class="font-semibold text-slate-900">Kesimpulan & Analisis Keseluruhan</strong> akan diperbarui secara otomatis. Klik <strong class="font-semibold text-slate-900">Cetak / Export PDF</strong> untuk menyimpan seluruh formulir beserta kesimpulan akhirnya.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Action Bar Bawah -->
+        <div class="no-print mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 pb-10">
+            <button type="button" id="btn-add-form-bottom" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Tambah Formulir
+            </button>
+            <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+                <button type="button" id="btn-reset-bottom" class="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-slate-600 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-300 hover:border-rose-300 rounded-xl transition-all">
+                    Reset Semua
+                </button>
+                <button type="button" id="btn-save-bottom" class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all">
+                    Simpan Data
+                </button>
+                <button type="button" id="btn-print-bottom" class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-sm transition-all">
+                    Cetak / Export PDF
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- SCRIPT UTAMA: MULTI-FORM DINAMIS, LOCALSTORAGE, ANALISIS & CETAK PDF     -->
+    <!-- ========================================================================= -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const STORAGE_KEY = 'uat_multi_respondent_data_v2';
+
+            // Definisi pertanyaan standar UAT (Q1 - Q5)
+            const QUESTIONS = [
+                {
+                    key: 'q1',
+                    code: 'Q1',
+                    label: '1. Apakah fitur dapat diakses dengan mudah?',
+                    shortName: 'Kemudahan Akses Fitur',
+                    recommendation: 'Perbaiki alur navigasi, struktur menu, serta kemudahan akses menuju fitur-fitur utama agar lebih intuitif bagi pengguna.'
+                },
+                {
+                    key: 'q2',
+                    code: 'Q2',
+                    label: '2. Apakah hasil sesuai dengan kebutuhan?',
+                    shortName: 'Kesesuaian Hasil & Kebutuhan',
+                    recommendation: 'Lakukan penyesuaian logika bisnis dan keluaran (output) sistem agar lebih akurat dan sesuai dengan kebutuhan operasional pengguna.'
+                },
+                {
+                    key: 'q3',
+                    code: 'Q3',
+                    label: '3. Apakah tampilan mudah dipahami?',
+                    shortName: 'Kemudahan Pemahaman Antarmuka (UI/UX)',
+                    recommendation: 'Tingkatkan desain antarmuka (UI/UX), kejelasan label, hierarki visual, dan panduan singkat pada layar yang membingungkan.'
+                },
+                {
+                    key: 'q4',
+                    code: 'Q4',
+                    label: '4. Apakah performa sistem memadai?',
+                    shortName: 'Performa & Kecepatan Sistem',
+                    recommendation: 'Optimalkan performa sistem (waktu muat halaman, query database, dan responsivitas interaksi) agar sistem berjalan lebih cepat dan stabil.'
+                },
+                {
+                    key: 'q5',
+                    code: 'Q5',
+                    label: '5. Apakah sistem layak digunakan?',
+                    shortName: 'Kelayakan Penggunaan Sistem',
+                    recommendation: 'Lakukan perbaikan menyeluruh pada kendala prioritas sebelum sistem dirilis ke lingkungan produksi dan lakukan uji ulang (re-UAT).'
+                }
+            ];
+
+            // Elemen DOM utama
+            const formsContainer = document.getElementById('forms-container');
+            const storageStatus = document.getElementById('storage-status');
+            const totalFormsBadgeText = document.getElementById('total-forms-badge-text');
+            const toastContainer = document.getElementById('toast-container');
+            const resetModal = document.getElementById('reset-modal');
+            const deleteFormModal = document.getElementById('delete-form-modal');
+            const deleteModalDesc = document.getElementById('delete-modal-desc');
+            const qaAdditionalNotesEl = document.getElementById('qa-additional-notes');
+            const qaAdditionalNotesPrintEl = document.getElementById('qa-additional-notes-print');
+
+            // State aplikasi
+            let state = {
+                forms: [],
+                qaSummaryNotes: ''
+            };
+
+            let pendingDeleteFormId = null;
+
+            // =====================================================================
+            // UTILITAS UMUM
+            // =====================================================================
+
+            /** Escape HTML agar teks responden aman saat dirender ke DOM */
+            function escapeHtml(str) {
+                if (str === null || str === undefined) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            /** Membuat objek formulir responden kosong baru */
+            function createEmptyForm(prefillFromFirst = false) {
+                const firstForm = prefillFromFirst && state.forms.length > 0 ? state.forms[0] : null;
+                return {
+                    id: 'uat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                    collapsed: false,
+                    nama_penguji: firstForm ? firstForm.nama_penguji : '',
+                    tanggal_wawancara: firstForm ? firstForm.tanggal_wawancara : '',
+                    nama_responden: '',
+                    peran_responden: '',
+                    skenario_uat: '',
+                    q1_jawaban: '', catatan_q1: '',
+                    q2_jawaban: '', catatan_q2: '',
+                    q3_jawaban: '', catatan_q3: '',
+                    q4_jawaban: '', catatan_q4: '',
+                    q5_jawaban: '', catatan_q5: '',
+                    keputusan_uat: '',
+                    saran_perbaikan: ''
+                };
+            }
+
+            /** Menampilkan toast notifikasi halus */
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                const styles = {
+                    success: 'bg-slate-900 text-white border-emerald-500/40',
+                    info: 'bg-slate-800 text-white border-slate-600',
+                    error: 'bg-rose-600 text-white border-rose-400'
+                };
+                const iconColor = type === 'success' ? 'text-emerald-400' : 'text-white';
+                const iconSvg = type === 'error'
+                    ? `<svg class="w-5 h-5 ${iconColor} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+                    : `<svg class="w-5 h-5 ${iconColor} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+
+                toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${styles[type] || styles.success}`;
+                toast.innerHTML = `${iconSvg}<span>${escapeHtml(message)}</span>`;
+                toastContainer.appendChild(toast);
+
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                });
+
+                setTimeout(() => {
+                    toast.classList.add('translate-y-2', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            /** Update indikator status penyimpanan di header */
+            function updateStatusIndicator(text, active = true) {
+                if (!storageStatus) return;
+                storageStatus.innerHTML = `
+                    <span class="w-2 h-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-400'}"></span>
+                    <span>${escapeHtml(text)}</span>
+                `;
+            }
+
+            /** Auto-resize textarea agar nyaman diketik di layar */
+            function autoResizeTextarea(textarea) {
+                if (!textarea) return;
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(textarea.scrollHeight, 64) + 'px';
+            }
+
+            /** Menentukan kategori evaluasi responden: 'positif' | 'netral' | 'negatif' | 'belum' */
+            function classifyRespondent(form) {
+                if (form.keputusan_uat === 'Diterima (Layak Digunakan)') return 'positif';
+                if (form.keputusan_uat === 'Diterima dengan Revisi Minor') return 'netral';
+                if (form.keputusan_uat === 'Ditolak (Perlu Perbaikan Mayor)') return 'negatif';
+
+                // Jika keputusan UAT belum dipilih, hitung berdasarkan mayoritas jawaban Q1-Q5
+                let ya = 0, sebagian = 0, tidak = 0;
+                QUESTIONS.forEach(q => {
+                    const ans = form[`${q.key}_jawaban`];
+                    if (ans === 'Ya') ya++;
+                    else if (ans === 'Sebagian') sebagian++;
+                    else if (ans === 'Tidak') tidak++;
+                });
+
+                const totalAnswered = ya + sebagian + tidak;
+                if (totalAnswered === 0) return 'belum';
+                if (tidak > ya && tidak >= sebagian) return 'negatif';
+                if (ya > tidak && ya > sebagian) return 'positif';
+                if (ya === totalAnswered) return 'positif';
+                if (tidak === totalAnswered) return 'negatif';
+                return 'netral';
+            }
+
+            /** Mendapatkan konfigurasi badge status keputusan untuk header kartu formulir */
+            function getStatusBadgeInfo(form) {
+                const cat = classifyRespondent(form);
+                if (form.keputusan_uat === 'Diterima (Layak Digunakan)') {
+                    return { text: 'Diterima (Layak)', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+                }
+                if (form.keputusan_uat === 'Diterima dengan Revisi Minor') {
+                    return { text: 'Revisi Minor', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
+                }
+                if (form.keputusan_uat === 'Ditolak (Perlu Perbaikan Mayor)') {
+                    return { text: 'Ditolak (Mayor)', cls: 'bg-rose-100 text-rose-800 border-rose-200' };
+                }
+                if (cat === 'positif') {
+                    return { text: 'Cenderung Positif', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                }
+                if (cat === 'netral') {
+                    return { text: 'Cenderung Revisi', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+                }
+                if (cat === 'negatif') {
+                    return { text: 'Cenderung Negatif', cls: 'bg-rose-50 text-rose-700 border-rose-200' };
+                }
+                return { text: 'Belum Dinilai', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
+            }
+
+            // =====================================================================
+            // PENYIMPANAN LOCALSTORAGE
+            // =====================================================================
+
+            function saveToStorage(showNotification = false) {
+                try {
+                    const payload = {
+                        forms: state.forms,
+                        qaSummaryNotes: state.qaSummaryNotes,
+                        _lastSaved: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                    updateStatusIndicator(`Tersimpan (${payload._lastSaved})`, true);
+                    if (showNotification) {
+                        showToast(`Berhasil menyimpan ${state.forms.length} formulir ke browser!`, 'success');
+                    }
+                } catch (err) {
+                    console.error('Gagal menyimpan ke localStorage:', err);
+                    showToast('Gagal menyimpan data ke penyimpanan browser.', 'error');
+                }
+            }
+
+            function loadFromStorage() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed.forms) && parsed.forms.length > 0) {
+                            state.forms = parsed.forms;
+                            state.qaSummaryNotes = parsed.qaSummaryNotes || '';
+                            if (parsed._lastSaved) {
+                                updateStatusIndicator(`Dipulihkan (${parsed._lastSaved})`, true);
+                            }
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Gagal memuat data dari localStorage:', err);
+                }
+                // Default: buat 1 formulir kosong
+                state.forms = [createEmptyForm(false)];
+                state.qaSummaryNotes = '';
+            }
+
+            // =====================================================================
+            // RENDERING MULTI-FORMULIR DINAMIS
+            // =====================================================================
+
+            /** Membangun HTML untuk satu kartu formulir responden */
+            function buildFormCardHTML(form, index) {
+                const num = index + 1;
+                const badge = getStatusBadgeInfo(form);
+                const respondentTitle = form.nama_responden ? form.nama_responden : 'Belum diisi';
+                const canDelete = state.forms.length > 1;
+
+                // Bangun HTML pertanyaan Q1 - Q5
+                const questionsHTML = QUESTIONS.map((q) => {
+                    const ansVal = form[`${q.key}_jawaban`] || '';
+                    const noteVal = form[`catatan_${q.key}`] || '';
+                    const radioName = `${form.id}_${q.key}_jawaban`;
+                    const noteId = `${form.id}_catatan_${q.key}`;
+
+                    return `
+                        <div class="p-4 sm:p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                                <div class="flex items-start sm:items-center gap-3">
+                                    <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                        ${q.code}
+                                    </span>
+                                    <h4 class="text-sm sm:text-base font-semibold text-slate-800">
+                                        ${escapeHtml(q.label)}
+                                    </h4>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 pl-10 sm:pl-0">
+                                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="${radioName}" value="Ya" data-field="${q.key}_jawaban" ${ansVal === 'Ya' ? 'checked' : ''} class="accent-emerald-600 w-4 h-4">
+                                        <span>Ya</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="${radioName}" value="Tidak" data-field="${q.key}_jawaban" ${ansVal === 'Tidak' ? 'checked' : ''} class="accent-rose-600 w-4 h-4">
+                                        <span>Tidak</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="${radioName}" value="Sebagian" data-field="${q.key}_jawaban" ${ansVal === 'Sebagian' ? 'checked' : ''} class="accent-amber-600 w-4 h-4">
+                                        <span>Sebagian</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="pl-0 sm:pl-10">
+                                <label for="${noteId}" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                    Catatan ${q.code}
+                                </label>
+                                <textarea id="${noteId}" data-field="catatan_${q.key}" rows="2" placeholder="Catatan responden..."
+                                    class="screen-textarea w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all">${escapeHtml(noteVal)}</textarea>
+                                <div data-print-mirror="catatan_${q.key}" class="print-only-text ${noteVal.trim() ? '' : 'is-empty'}">${noteVal.trim() ? escapeHtml(noteVal) : 'Tidak ada catatan.'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <article class="respondent-form-wrapper bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden" data-form-id="${form.id}">
+                        <!-- Header Kartu Responden -->
+                        <div class="bg-slate-800 text-white px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-bold text-sm flex items-center justify-center shrink-0">
+                                    #${num}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h2 class="text-base sm:text-lg font-bold text-white leading-tight">
+                                            Formulir Responden #${num}
+                                        </h2>
+                                        <span data-header-badge class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.cls}">
+                                            ${escapeHtml(badge.text)}
+                                        </span>
+                                    </div>
+                                    <p data-header-subtitle class="text-xs text-slate-300 truncate mt-0.5">
+                                        Responden: <span class="font-medium text-white">${escapeHtml(respondentTitle)}</span>${form.peran_responden ? ` • ${escapeHtml(form.peran_responden)}` : ''}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Tombol Kontrol Kartu (Collapse & Hapus) -->
+                            <div class="no-print flex items-center gap-2 shrink-0">
+                                <button type="button" data-action="toggle-collapse" class="px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-700/80 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors flex items-center gap-1.5" title="Buka/Tutup Formulir">
+                                    <svg data-collapse-icon class="w-4 h-4 transition-transform duration-200 ${form.collapsed ? '-rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span data-collapse-label>${form.collapsed ? 'Buka' : 'Tutup'}</span>
+                                </button>
+                                ${canDelete ? `
+                                <button type="button" data-action="delete-form" class="px-3 py-1.5 text-xs font-medium text-rose-200 bg-rose-500/20 hover:bg-rose-600 hover:text-white border border-rose-400/30 rounded-lg transition-colors flex items-center gap-1" title="Hapus Formulir Ini">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    <span class="hidden sm:inline">Hapus</span>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Isi Formulir (Otomatis terbuka penuh saat print) -->
+                        <div class="form-body-content p-5 sm:p-6 space-y-6 ${form.collapsed ? 'hidden' : ''}">
+
+                            <!-- BAGIAN 01: Identitas Penguji & Responden -->
+                            <section class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden print-card">
+                                <div class="bg-slate-50/80 px-5 py-3.5 border-b border-slate-200/80 flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                        01
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Identitas Penguji & Responden</h3>
+                                        <p class="text-xs text-slate-500">Informasi pelaksana pengujian dan profil pengguna akhir</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                                    <div>
+                                        <label for="${form.id}_nama_penguji" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Nama Penguji
+                                        </label>
+                                        <input type="text" id="${form.id}_nama_penguji" data-field="nama_penguji" value="${escapeHtml(form.nama_penguji)}" placeholder="Nama lengkap penguji (QA)"
+                                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                    </div>
+
+                                    <div>
+                                        <label for="${form.id}_tanggal_wawancara" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Tanggal Wawancara
+                                        </label>
+                                        <input type="date" id="${form.id}_tanggal_wawancara" data-field="tanggal_wawancara" value="${escapeHtml(form.tanggal_wawancara)}"
+                                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                    </div>
+
+                                    <div>
+                                        <label for="${form.id}_nama_responden" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Nama Responden
+                                        </label>
+                                        <input type="text" id="${form.id}_nama_responden" data-field="nama_responden" value="${escapeHtml(form.nama_responden)}" placeholder="Nama pengguna akhir"
+                                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                    </div>
+
+                                    <div>
+                                        <label for="${form.id}_peran_responden" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Peran Responden
+                                        </label>
+                                        <select id="${form.id}_peran_responden" data-field="peran_responden"
+                                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                            <option value="" ${form.peran_responden === '' ? 'selected' : ''}>— Pilih peran —</option>
+                                            <option value="Administrator" ${form.peran_responden === 'Administrator' ? 'selected' : ''}>Administrator</option>
+                                            <option value="Operator / Staf" ${form.peran_responden === 'Operator / Staf' ? 'selected' : ''}>Operator / Staf</option>
+                                            <option value="Pengguna Umum / Pelanggan" ${form.peran_responden === 'Pengguna Umum / Pelanggan' ? 'selected' : ''}>Pengguna Umum / Pelanggan</option>
+                                            <option value="Manajer / Pimpinan" ${form.peran_responden === 'Manajer / Pimpinan' ? 'selected' : ''}>Manajer / Pimpinan</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="md:col-span-2">
+                                        <label for="${form.id}_skenario_uat" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Skenario UAT
+                                        </label>
+                                        <select id="${form.id}_skenario_uat" data-field="skenario_uat"
+                                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                            <option value="" ${form.skenario_uat === '' ? 'selected' : ''}>— Pilih skenario —</option>
+                                            <option value="Skenario 01 - Autentikasi & Hak Akses" ${form.skenario_uat === 'Skenario 01 - Autentikasi & Hak Akses' ? 'selected' : ''}>Skenario 01 - Autentikasi & Hak Akses</option>
+                                            <option value="Skenario 02 - Manajemen Data Master" ${form.skenario_uat === 'Skenario 02 - Manajemen Data Master' ? 'selected' : ''}>Skenario 02 - Manajemen Data Master</option>
+                                            <option value="Skenario 03 - Proses Transaksi Utama" ${form.skenario_uat === 'Skenario 03 - Proses Transaksi Utama' ? 'selected' : ''}>Skenario 03 - Proses Transaksi Utama</option>
+                                            <option value="Skenario 04 - Laporan & Ekspor Data" ${form.skenario_uat === 'Skenario 04 - Laporan & Ekspor Data' ? 'selected' : ''}>Skenario 04 - Laporan & Ekspor Data</option>
+                                            <option value="Skenario 05 - Pengujian End-to-End" ${form.skenario_uat === 'Skenario 05 - Pengujian End-to-End' ? 'selected' : ''}>Skenario 05 - Pengujian End-to-End</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- BAGIAN 02: Pertanyaan Wawancara -->
+                            <section class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden print-allow-break">
+                                <div class="bg-slate-50/80 px-5 py-3.5 border-b border-slate-200/80 flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                        02
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Pertanyaan Wawancara</h3>
+                                        <p class="text-xs text-slate-500">Evaluasi aspek fungsionalitas, antarmuka, dan kelayakan sistem</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-5 space-y-4">
+                                    ${questionsHTML}
+                                </div>
+                            </section>
+
+                            <!-- BAGIAN 03: Keputusan & Saran -->
+                            <section class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden print-card">
+                                <div class="bg-slate-50/80 px-5 py-3.5 border-b border-slate-200/80 flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                        03
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Keputusan & Saran</h3>
+                                        <p class="text-xs text-slate-500">Kesimpulan hasil uji penerimaan pengguna dan masukan pengembangan</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-5 space-y-4">
+                                    <div>
+                                        <label for="${form.id}_keputusan_uat" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Keputusan UAT
+                                        </label>
+                                        <select id="${form.id}_keputusan_uat" data-field="keputusan_uat"
+                                            class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                                            <option value="" ${form.keputusan_uat === '' ? 'selected' : ''}>— Pilih keputusan —</option>
+                                            <option value="Diterima (Layak Digunakan)" ${form.keputusan_uat === 'Diterima (Layak Digunakan)' ? 'selected' : ''}>Diterima (Layak Digunakan)</option>
+                                            <option value="Diterima dengan Revisi Minor" ${form.keputusan_uat === 'Diterima dengan Revisi Minor' ? 'selected' : ''}>Diterima dengan Revisi Minor</option>
+                                            <option value="Ditolak (Perlu Perbaikan Mayor)" ${form.keputusan_uat === 'Ditolak (Perlu Perbaikan Mayor)' ? 'selected' : ''}>Ditolak (Perlu Perbaikan Mayor)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="${form.id}_saran_perbaikan" class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">
+                                            Saran Perbaikan
+                                        </label>
+                                        <textarea id="${form.id}_saran_perbaikan" data-field="saran_perbaikan" rows="3" placeholder="Saran dari responden..."
+                                            class="screen-textarea w-full px-3.5 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">${escapeHtml(form.saran_perbaikan)}</textarea>
+                                        <div data-print-mirror="saran_perbaikan" class="print-only-text ${form.saran_perbaikan.trim() ? '' : 'is-empty'}">${form.saran_perbaikan.trim() ? escapeHtml(form.saran_perbaikan) : 'Tidak ada saran perbaikan.'}</div>
+                                    </div>
+                                </div>
+                            </section>
+
+                        </div>
+                    </article>
+                `;
+            }
+
+            /** Merender ulang seluruh daftar formulir responden */
+            function renderAllForms() {
+                formsContainer.innerHTML = state.forms.map((form, idx) => buildFormCardHTML(form, idx)).join('');
+                totalFormsBadgeText.textContent = `${state.forms.length} Responden`;
+
+                // Auto-resize semua textarea setelah dirender
+                formsContainer.querySelectorAll('textarea').forEach(autoResizeTextarea);
+
+                // Sinkronkan catatan tambahan QA
+                qaAdditionalNotesEl.value = state.qaSummaryNotes || '';
+                syncQANotesPrintMirror();
+                autoResizeTextarea(qaAdditionalNotesEl);
+
+                // Perbarui bagian kesimpulan otomatis
+                updateConclusionSection();
+            }
+
+            /** Memperbarui header badge & subjudul pada satu kartu tanpa re-render penuh */
+            function updateCardHeader(cardEl, form) {
+                const badgeEl = cardEl.querySelector('[data-header-badge]');
+                const subtitleEl = cardEl.querySelector('[data-header-subtitle]');
+                const badge = getStatusBadgeInfo(form);
+
+                if (badgeEl) {
+                    badgeEl.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.cls}`;
+                    badgeEl.textContent = badge.text;
+                }
+                if (subtitleEl) {
+                    const respondentTitle = form.nama_responden ? form.nama_responden : 'Belum diisi';
+                    subtitleEl.innerHTML = `Responden: <span class="font-medium text-white">${escapeHtml(respondentTitle)}</span>${form.peran_responden ? ` • ${escapeHtml(form.peran_responden)}` : ''}`;
+                }
+            }
+
+            /** Sinkronisasi catatan tambahan QA untuk tampilan cetak */
+            function syncQANotesPrintMirror() {
+                const val = (state.qaSummaryNotes || '').trim();
+                if (val) {
+                    qaAdditionalNotesPrintEl.textContent = val;
+                    qaAdditionalNotesPrintEl.classList.remove('is-empty');
+                } else {
+                    qaAdditionalNotesPrintEl.textContent = 'Tidak ada catatan tambahan dari penguji.';
+                    qaAdditionalNotesPrintEl.classList.add('is-empty');
+                }
+            }
+
+            // =====================================================================
+            // GENERASI KESIMPULAN & ANALISIS OTOMATIS
+            // =====================================================================
+
+            function updateConclusionSection() {
+                const total = state.forms.length;
+                let countPositif = 0;
+                let countNetral = 0;
+                let countNegatif = 0;
+                let countBelum = 0;
+
+                const positiveRespondents = [];
+                const negativeOrMinorRespondents = [];
+                const allSuggestions = [];
+
+                // Hitung statistik per aspek Q1 - Q5
+                const aspectStats = QUESTIONS.map(q => ({
+                    ...q,
+                    ya: 0,
+                    sebagian: 0,
+                    tidak: 0
+                }));
+
+                state.forms.forEach((form, index) => {
+                    const num = index + 1;
+                    const displayName = form.nama_responden.trim() || `Responden #${num}`;
+                    const role = form.peran_responden || 'Peran belum dipilih';
+                    const scenario = form.skenario_uat || '';
+                    const category = classifyRespondent(form);
+
+                    if (category === 'positif') countPositif++;
+                    else if (category === 'netral') countNetral++;
+                    else if (category === 'negatif') countNegatif++;
+                    else countBelum++;
+
+                    // Kumpulkan detail jawaban Q1 - Q5 per responden
+                    const yaAspects = [];
+                    const issueAspects = [];
+                    const notesAll = [];
+                    const notesIssues = [];
+
+                    QUESTIONS.forEach((q, qIdx) => {
+                        const ans = form[`${q.key}_jawaban`];
+                        const note = (form[`catatan_${q.key}`] || '').trim();
+
+                        if (ans === 'Ya') {
+                            aspectStats[qIdx].ya++;
+                            yaAspects.push(`${q.code} (${q.shortName})`);
+                        } else if (ans === 'Sebagian') {
+                            aspectStats[qIdx].sebagian++;
+                            issueAspects.push({ code: q.code, name: q.shortName, status: 'Sebagian', note });
+                        } else if (ans === 'Tidak') {
+                            aspectStats[qIdx].tidak++;
+                            issueAspects.push({ code: q.code, name: q.shortName, status: 'Tidak', note });
+                        }
+
+                        if (note) {
+                            notesAll.push({ code: q.code, text: note });
+                            if (ans === 'Tidak' || ans === 'Sebagian') {
+                                notesIssues.push({ code: q.code, text: note });
+                            }
+                        }
+                    });
+
+                    // Kelompokkan ke Positif vs Negatif/Perlu Perbaikan
+                    if (category === 'positif') {
+                        positiveRespondents.push({
+                            num,
+                            name: displayName,
+                            role,
+                            scenario,
+                            decision: form.keputusan_uat || 'Mayoritas Jawaban "Ya"',
+                            yaAspects,
+                            notes: notesAll
+                        });
+                    } else if (category === 'negatif' || category === 'netral') {
+                        negativeOrMinorRespondents.push({
+                            num,
+                            name: displayName,
+                            role,
+                            scenario,
+                            category,
+                            decision: form.keputusan_uat || (category === 'negatif' ? 'Mayoritas Jawaban "Tidak"' : 'Sebagian / Perlu Revisi'),
+                            issueAspects,
+                            notes: notesIssues.length > 0 ? notesIssues : notesAll
+                        });
+                    }
+
+                    // Kumpulkan saran perbaikan responden
+                    if (form.saran_perbaikan && form.saran_perbaikan.trim()) {
+                        allSuggestions.push({
+                            num,
+                            name: displayName,
+                            role,
+                            text: form.saran_perbaikan.trim()
+                        });
+                    }
+                });
+
+                // -----------------------------------------------------------------
+                // 1. Render Kartu Metrik Statistik
+                // -----------------------------------------------------------------
+                const pct = (val) => total > 0 ? Math.round((val / total) * 100) : 0;
+
+                document.getElementById('summary-metrics-grid').innerHTML = `
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 print-card">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Responden</p>
+                        <p class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">${total}</p>
+                        <p class="text-[11px] text-slate-500 mt-1">${countBelum > 0 ? `${countBelum} belum dinilai` : 'Semua telah dinilai'}</p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 print-card">
+                        <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Positif (Diterima)</p>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <p class="text-2xl sm:text-3xl font-extrabold text-emerald-700">${countPositif}</p>
+                            <span class="text-xs font-bold text-emerald-600">(${pct(countPositif)}%)</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-700/80 mt-1">Layak digunakan</p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 print-card">
+                        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Revisi Minor</p>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <p class="text-2xl sm:text-3xl font-extrabold text-amber-700">${countNetral}</p>
+                            <span class="text-xs font-bold text-amber-600">(${pct(countNetral)}%)</span>
+                        </div>
+                        <p class="text-[11px] text-amber-700/80 mt-1">Netral / sebagian</p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-rose-50/80 border border-rose-200 print-card">
+                        <p class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Negatif (Ditolak)</p>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <p class="text-2xl sm:text-3xl font-extrabold text-rose-700">${countNegatif}</p>
+                            <span class="text-xs font-bold text-rose-600">(${pct(countNegatif)}%)</span>
+                        </div>
+                        <p class="text-[11px] text-rose-700/80 mt-1">Perlu perbaikan mayor</p>
+                    </div>
+                `;
+
+                // -----------------------------------------------------------------
+                // 2. Render Narasi Ringkasan Eksekutif Otomatis
+                // -----------------------------------------------------------------
+                const narrativeEl = document.getElementById('executive-narrative');
+                const evaluatedCount = total - countBelum;
+
+                if (evaluatedCount === 0) {
+                    narrativeEl.innerHTML = `
+                        <p class="text-slate-500 italic">
+                            Belum ada data penilaian yang lengkap pada ${total} formulir responden. Silakan pilih jawaban pertanyaan wawancara (Q1–Q5) atau tentukan Keputusan UAT untuk menghasilkan narasi kesimpulan otomatis.
+                        </p>
+                    `;
+                } else {
+                    let overallVerdict = '';
+                    if (countNegatif === 0 && countNetral === 0 && countPositif === evaluatedCount) {
+                        overallVerdict = `<strong class="text-emerald-700">Sangat Baik — Sistem diterima sepenuhnya oleh seluruh responden</strong> dan dinyatakan layak untuk digunakan.`;
+                    } else if (countPositif >= countNetral + countNegatif && countNegatif === 0) {
+                        overallVerdict = `<strong class="text-emerald-700">Baik — Mayoritas responden menerima sistem</strong>, namun tetap disarankan menindaklanjuti beberapa catatan revisi minor yang ditemukan.`;
+                    } else if (countNegatif > countPositif) {
+                        overallVerdict = `<strong class="text-rose-700">Perlu Perhatian Serius — Sebagian besar responden memberikan penilaian negatif/penolakan</strong>. Sistem memerlukan perbaikan mayor sebelum dapat diimplementasikan.`;
+                    } else {
+                        overallVerdict = `<strong class="text-amber-700">Cukup — Penilaian responden masih terbagi</strong> antara yang menerima dengan yang meminta perbaikan. Disarankan menyelesaikan kendala utama yang dilaporkan terlebih dahulu.`;
+                    }
+
+                    narrativeEl.innerHTML = `
+                        <p>
+                            Berdasarkan hasil pengujian User Acceptance Testing (UAT) terhadap total <strong>${total} pengguna/responden</strong>,
+                            terdapat <strong class="text-emerald-700">${countPositif} responden (${pct(countPositif)}%)</strong> yang memberikan penilaian <strong>positif (layak digunakan)</strong>,
+                            <strong class="text-amber-700">${countNetral} responden (${pct(countNetral)}%)</strong> yang memberikan penilaian <strong>netral / diterima dengan revisi minor</strong>,
+                            dan <strong class="text-rose-700">${countNegatif} responden (${pct(countNegatif)}%)</strong> yang memberikan penilaian <strong>negatif (ditolak / perlu perbaikan mayor)</strong>${countBelum > 0 ? `, serta <strong>${countBelum} responden (${pct(countBelum)}%)</strong> yang belum selesai dinilai` : ''}.
+                        </p>
+                        <p class="pt-1">
+                            <strong>Status Kesimpulan Umum:</strong> ${overallVerdict}
+                        </p>
+                    `;
+                }
+
+                // -----------------------------------------------------------------
+                // 3. Render Tabel Rekapitulasi Jawaban per Aspek (Q1 - Q5)
+                // -----------------------------------------------------------------
+                const tbodyEl = document.getElementById('aspect-summary-tbody');
+                tbodyEl.innerHTML = aspectStats.map(stat => {
+                    const answered = stat.ya + stat.sebagian + stat.tidak;
+                    const positivePct = answered > 0 ? Math.round((stat.ya / answered) * 100) : 0;
+                    const barColor = positivePct >= 75 ? 'bg-emerald-500' : positivePct >= 50 ? 'bg-amber-500' : 'bg-rose-500';
+
+                    return `
+                        <tr class="hover:bg-slate-50/70">
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px] shrink-0">${stat.code}</span>
+                                    <span class="font-medium text-slate-800">${escapeHtml(stat.shortName)}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3 text-center font-semibold text-emerald-700">${stat.ya}</td>
+                            <td class="py-3 px-3 text-center font-semibold text-amber-700">${stat.sebagian}</td>
+                            <td class="py-3 px-3 text-center font-semibold text-rose-700">${stat.tidak}</td>
+                            <td class="py-3 px-4 text-right">
+                                <div class="inline-flex items-center gap-2 justify-end">
+                                    <div class="w-16 h-2 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
+                                        <div class="h-full ${barColor} rounded-full" style="width: ${positivePct}%"></div>
+                                    </div>
+                                    <span class="font-bold text-slate-800 w-10 text-right">${answered > 0 ? positivePct + '%' : '—'}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // -----------------------------------------------------------------
+                // 4. Render Rincian Responden Positif vs Negatif/Perlu Perbaikan
+                // -----------------------------------------------------------------
+                document.getElementById('positive-group-count').textContent = positiveRespondents.length;
+                const posListEl = document.getElementById('positive-reasons-list');
+
+                if (positiveRespondents.length === 0) {
+                    posListEl.innerHTML = `<p class="text-slate-500 italic">Belum ada responden yang masuk dalam kategori positif.</p>`;
+                } else {
+                    posListEl.innerHTML = positiveRespondents.map(item => `
+                        <div class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-sm print-card">
+                            <div class="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
+                                <div>
+                                    <span class="font-bold text-slate-900">${escapeHtml(item.name)}</span>
+                                    <span class="text-xs text-slate-500 ml-1">(${escapeHtml(item.role)})</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                                    ${escapeHtml(item.decision)}
+                                </span>
+                            </div>
+                            ${item.yaAspects.length > 0 ? `
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    <strong class="text-emerald-800">Aspek Dinilai Baik:</strong> ${escapeHtml(item.yaAspects.join(', '))}.
+                                </p>
+                            ` : ''}
+                            ${item.notes.length > 0 ? `
+                                <div class="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                                    <p class="text-[11px] font-semibold text-slate-500 uppercase">Catatan / Alasan Responden:</p>
+                                    ${item.notes.map(n => `<p class="text-xs text-slate-700"><span class="font-semibold text-emerald-700">${n.code}:</span> ${escapeHtml(n.text)}</p>`).join('')}
+                                </div>
+                            ` : `<p class="text-xs text-slate-400 italic mt-1">Tidak ada catatan tambahan pada Q1–Q5.</p>`}
+                        </div>
+                    `).join('');
+                }
+
+                document.getElementById('negative-group-count').textContent = negativeOrMinorRespondents.length;
+                const negListEl = document.getElementById('negative-reasons-list');
+
+                if (negativeOrMinorRespondents.length === 0) {
+                    negListEl.innerHTML = `<p class="text-slate-500 italic">Tidak ada responden dengan penilaian negatif atau kendala revisi.</p>`;
+                } else {
+                    negListEl.innerHTML = negativeOrMinorRespondents.map(item => {
+                        const isNeg = item.category === 'negatif';
+                        const badgeCls = isNeg ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+                        const borderCls = isNeg ? 'border-rose-200/90' : 'border-amber-200/90';
+
+                        return `
+                            <div class="bg-white rounded-xl p-3.5 border ${borderCls} shadow-sm print-card">
+                                <div class="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
+                                    <div>
+                                        <span class="font-bold text-slate-900">${escapeHtml(item.name)}</span>
+                                        <span class="text-xs text-slate-500 ml-1">(${escapeHtml(item.role)})</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeCls}">
+                                        ${escapeHtml(item.decision)}
+                                    </span>
+                                </div>
+                                ${item.issueAspects.length > 0 ? `
+                                    <div class="text-xs text-slate-700 space-y-1 mt-1">
+                                        <p class="text-[11px] font-semibold text-rose-700 uppercase">Aspek Kendala / Perlu Perbaikan:</p>
+                                        ${item.issueAspects.map(iss => `
+                                            <p class="leading-relaxed">
+                                                <span class="inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${iss.status === 'Tidak' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}">${iss.code} • ${iss.status}</span>
+                                                <span class="font-medium text-slate-800">${escapeHtml(iss.name)}</span>${iss.note ? ` — <em>"${escapeHtml(iss.note)}"</em>` : ''}
+                                            </p>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <p class="text-xs text-slate-600 mt-1">Responden memilih keputusan <strong>${escapeHtml(item.decision)}</strong> tanpa menandai jawaban Tidak/Sebagian pada Q1–Q5.</p>
+                                `}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // -----------------------------------------------------------------
+                // 5. Render Daftar Saran Responden & Rekomendasi Otomatis
+                // -----------------------------------------------------------------
+                const suggListEl = document.getElementById('respondent-suggestions-list');
+                if (allSuggestions.length === 0) {
+                    suggListEl.innerHTML = `<p class="text-slate-500 italic">Belum ada saran perbaikan yang dituliskan oleh responden.</p>`;
+                } else {
+                    suggListEl.innerHTML = allSuggestions.map(s => `
+                        <div class="bg-white rounded-xl p-3.5 border border-slate-200/80 print-card">
+                            <p class="text-xs font-bold text-slate-800 mb-1">
+                                ${escapeHtml(s.name)} <span class="font-normal text-slate-500">(${escapeHtml(s.role)})</span>
+                            </p>
+                            <p class="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${escapeHtml(s.text)}</p>
+                        </div>
+                    `).join('');
+                }
+
+                // Generate rekomendasi tindak lanjut otomatis berdasarkan aspek terlemah & keputusan mayoritas
+                const autoRecEl = document.getElementById('auto-recommendations-list');
+                const recommendations = [];
+
+                // Cari aspek yang memiliki jawaban Tidak atau Sebagian, urutkan dari yang terbanyak kendalanya
+                const problematicAspects = aspectStats
+                    .map(s => ({ ...s, issues: s.tidak * 2 + s.sebagian }))
+                    .filter(s => s.issues > 0)
+                    .sort((a, b) => b.issues - a.issues);
+
+                problematicAspects.forEach(a => {
+                    recommendations.push(
+                        `<strong>Prioritas ${a.code} (${escapeHtml(a.shortName)}):</strong> Ditemukan ${a.tidak} jawaban "Tidak" dan ${a.sebagian} jawaban "Sebagian". ${escapeHtml(a.recommendation)}`
+                    );
+                });
+
+                if (countNegatif > 0) {
+                    recommendations.push(
+                        `<strong>Tindak Lanjut Perbaikan Mayor:</strong> Lakukan sesi evaluasi teknis bersama tim pengembang untuk menuntaskan penyebab penolakan dari ${countNegatif} responden, kemudian jadwalkan pengujian ulang (Re-UAT).`
+                    );
+                } else if (countNetral > 0) {
+                    recommendations.push(
+                        `<strong>Penyelesaian Revisi Minor:</strong> Sistem pada dasarnya dapat digunakan, namun disarankan menyelesaikan poin revisi minor dari ${countNetral} responden sebelum implementasi penuh (go-live).`
+                    );
+                } else if (countPositif > 0 && evaluatedCount === countPositif) {
+                    recommendations.push(
+                        `<strong>Kesiapan Implementasi:</strong> Seluruh responden memberikan penilaian positif tanpa kendala berarti. Sistem direkomendasikan untuk melanjutkan ke tahap peluncuran (deployment) dengan pemantauan berkala.`
+                    );
+                }
+
+                if (allSuggestions.length > 0) {
+                    recommendations.push(
+                        `<strong>Kajian Masukan Pengguna:</strong> Pertimbangkan ${allSuggestions.length} saran perbaikan dari responden di atas sebagai backlog penyempurnaan pada iterasi rilis berikutnya.`
+                    );
+                }
+
+                if (recommendations.length === 0) {
+                    autoRecEl.innerHTML = `<li class="text-slate-500 italic list-none -ml-5">Rekomendasi tindak lanjut akan muncul otomatis setelah formulir responden mulai diisi.</li>`;
+                } else {
+                    autoRecEl.innerHTML = recommendations.map(r => `<li class="leading-relaxed">${r}</li>`).join('');
+                }
+
+                // Update timestamp di header kesimpulan
+                const nowStr = new Date().toLocaleString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                document.getElementById('conclusion-date-stamp').textContent = `Diperbarui: ${nowStr}`;
+            }
+
+            // =====================================================================
+            // EVENT HANDLER DELEGASI UNTUK FORMULIR DINAMIS
+            // =====================================================================
+
+            // Tangani perubahan input / textarea / select / radio di dalam formulir responden
+            function handleFormFieldUpdate(e) {
+                const target = e.target;
+                const field = target.getAttribute('data-field');
+                if (!field) return;
+
+                const cardEl = target.closest('[data-form-id]');
+                if (!cardEl) return;
+
+                const formId = cardEl.getAttribute('data-form-id');
+                const form = state.forms.find(f => f.id === formId);
+                if (!form) return;
+
+                form[field] = target.value;
+
+                // Jika textarea, update tinggi & sinkronkan mirror untuk print PDF
+                if (target.tagName === 'TEXTAREA') {
+                    autoResizeTextarea(target);
+                    const mirror = cardEl.querySelector(`[data-print-mirror="${field}"]`);
+                    if (mirror) {
+                        const trimmed = target.value.trim();
+                        mirror.textContent = trimmed || (field === 'saran_perbaikan' ? 'Tidak ada saran perbaikan.' : 'Tidak ada catatan.');
+                        mirror.classList.toggle('is-empty', !trimmed);
+                    }
+                }
+
+                updateCardHeader(cardEl, form);
+                updateConclusionSection();
+                saveToStorage(false);
+            }
+
+            formsContainer.addEventListener('input', handleFormFieldUpdate);
+            formsContainer.addEventListener('change', handleFormFieldUpdate);
+
+            // Tangani klik tombol Collapse/Expand & Hapus pada kartu formulir
+            formsContainer.addEventListener('click', (e) => {
+                const actionBtn = e.target.closest('[data-action]');
+                if (!actionBtn) return;
+
+                const action = actionBtn.getAttribute('data-action');
+                const cardEl = actionBtn.closest('[data-form-id]');
+                if (!cardEl) return;
+
+                const formId = cardEl.getAttribute('data-form-id');
+                const formIndex = state.forms.findIndex(f => f.id === formId);
+                if (formIndex === -1) return;
+
+                if (action === 'toggle-collapse') {
+                    const form = state.forms[formIndex];
+                    form.collapsed = !form.collapsed;
+                    const bodyEl = cardEl.querySelector('.form-body-content');
+                    const iconEl = actionBtn.querySelector('[data-collapse-icon]');
+                    const labelEl = actionBtn.querySelector('[data-collapse-label]');
+
+                    bodyEl.classList.toggle('hidden', form.collapsed);
+                    iconEl.classList.toggle('-rotate-90', form.collapsed);
+                    labelEl.textContent = form.collapsed ? 'Buka' : 'Tutup';
+                    saveToStorage(false);
+                }
+
+                if (action === 'delete-form') {
+                    if (state.forms.length <= 1) {
+                        showToast('Minimal harus tersisa 1 formulir responden.', 'error');
+                        return;
+                    }
+                    pendingDeleteFormId = formId;
+                    const respName = state.forms[formIndex].nama_responden.trim() || `Responden #${formIndex + 1}`;
+                    deleteModalDesc.textContent = `Apakah Anda yakin ingin menghapus Formulir #${formIndex + 1} (${respName})? Data pada formulir ini tidak dapat dikembalikan.`;
+                    deleteFormModal.classList.remove('hidden');
+                    deleteFormModal.classList.add('flex');
+                }
+            });
+
+            // Tangani input Catatan Tambahan Penguji (QA)
+            qaAdditionalNotesEl.addEventListener('input', (e) => {
+                state.qaSummaryNotes = e.target.value;
+                autoResizeTextarea(e.target);
+                syncQANotesPrintMirror();
+                saveToStorage(false);
+            });
+
+            // =====================================================================
+            // AKSI UTAMA: TAMBAH FORM, SIMPAN, RESET, HAPUS, & CETAK PDF
+            // =====================================================================
+
+            function addNewForm() {
+                const newForm = createEmptyForm(true); // Auto-prefill Nama Penguji & Tanggal dari form #1
+                state.forms.push(newForm);
+                renderAllForms();
+                saveToStorage(false);
+
+                // Gulir halus ke formulir baru yang baru ditambahkan
+                const newCard = formsContainer.querySelector(`[data-form-id="${newForm.id}"]`);
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                showToast(`Formulir Responden #${state.forms.length} berhasil ditambahkan!`, 'success');
+            }
+
+            // Event tombol Tambah Formulir (Atas, Tengah, Bawah)
+            document.getElementById('btn-add-form').addEventListener('click', addNewForm);
+            document.getElementById('btn-add-form-mid').addEventListener('click', addNewForm);
+            document.getElementById('btn-add-form-bottom').addEventListener('click', addNewForm);
+
+            // Event tombol Simpan Data
+            document.getElementById('btn-save').addEventListener('click', () => saveToStorage(true));
+            document.getElementById('btn-save-bottom').addEventListener('click', () => saveToStorage(true));
+
+            // Event tombol Cetak / Export PDF
+            function handlePrintPDF() {
+                // Pastikan analisis kesimpulan & data tersimpan selalu yang paling mutakhir
+                updateConclusionSection();
+                syncQANotesPrintMirror();
+                saveToStorage(false);
+                window.print();
+            }
+
+            document.getElementById('btn-print').addEventListener('click', handlePrintPDF);
+            document.getElementById('btn-print-bottom').addEventListener('click', handlePrintPDF);
+
+            // Pastikan kesimpulan ter-refresh juga jika pengguna menekan Ctrl+P / Cmd+P
+            window.addEventListener('beforeprint', () => {
+                updateConclusionSection();
+                syncQANotesPrintMirror();
+            });
+
+            // Modal Reset Semua
+            const openResetModal = () => {
+                resetModal.classList.remove('hidden');
+                resetModal.classList.add('flex');
+            };
+            const closeResetModal = () => {
+                resetModal.classList.add('hidden');
+                resetModal.classList.remove('flex');
+            };
+
+            document.getElementById('btn-reset').addEventListener('click', openResetModal);
+            document.getElementById('btn-reset-bottom').addEventListener('click', openResetModal);
+            document.getElementById('cancel-reset-btn').addEventListener('click', closeResetModal);
+            resetModal.addEventListener('click', (e) => {
+                if (e.target === resetModal) closeResetModal();
+            });
+
+            document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+                localStorage.removeItem(STORAGE_KEY);
+                state.forms = [createEmptyForm(false)];
+                state.qaSummaryNotes = '';
+                renderAllForms();
+                updateStatusIndicator('Semua formulir dibersihkan', false);
+                closeResetModal();
+                showToast('Seluruh formulir dan data tersimpan telah direset.', 'error');
+            });
+
+            // Modal Hapus 1 Formulir
+            const closeDeleteModal = () => {
+                pendingDeleteFormId = null;
+                deleteFormModal.classList.add('hidden');
+                deleteFormModal.classList.remove('flex');
+            };
+
+            document.getElementById('cancel-delete-btn').addEventListener('click', closeDeleteModal);
+            deleteFormModal.addEventListener('click', (e) => {
+                if (e.target === deleteFormModal) closeDeleteModal();
+            });
+
+            document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+                if (pendingDeleteFormId && state.forms.length > 1) {
+                    state.forms = state.forms.filter(f => f.id !== pendingDeleteFormId);
+                    renderAllForms();
+                    saveToStorage(false);
+                    showToast('Formulir responden berhasil dihapus.', 'info');
+                }
+                closeDeleteModal();
+            });
+
+            // =====================================================================
+            // INISIALISASI AWAL
+            // =====================================================================
+            loadFromStorage();
+            renderAllForms();
+        });
+    </script>
+</body>
+</html>
