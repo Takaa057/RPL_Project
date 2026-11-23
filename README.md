@@ -50,5 +50,5 @@ RPL_Project/
 
 ## Akses Link
 
--[Buka Formulir Pengujian UAT](https://takaa057.github.io/RPL_Project/docs/formulir_pengujian_aplikasi_uat.html)
--[Buka Powerpoint Laporan](https://takaa057.github.io/RPL_Project/docs/PPT_RPL_KEL_1.pptx)
+- **Formulir Pengujian UAT:** [Buka Formulir Pengujian UAT](https://takaa057.github.io/RPL_Project/docs/formulir_pengujian_aplikasi_uat.html)
+- **Powerpoint Laporan:** [Buka Powerpoint Laporan](https://takaa057.github.io/RPL_Project/docs/PPT_RPL_KEL_1.pptx)
