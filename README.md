@@ -46,3 +46,8 @@ RPL_Project/
 │   ├── .htaccess        # Konfigurasi URL rewriting (Pretty URLs)
 │   └── index.php        # Entry point (front controller) aplikasi
 └── README.md
+```
+
+## Akses Link
+
+[Buka Formulir Pengujian UAT](./docs/formulir_pengujian_aplikasi_uat.html)
