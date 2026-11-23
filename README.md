@@ -14,8 +14,6 @@ Repositori ini dibuat sebagai bagian dari proyek mata kuliah **Rekayasa Perangka
 - **Pencatatan Transaksi Inventaris:** Monitoring barang masuk, barang keluar, peminjaman, maupun kondisi aset sekolah.
 - **Dashboard & Rekapitulasi:** Ringkasan informasi stok dan kondisi inventaris sekolah secara keseluruhan.
 
-> *Catatan: Sesuaikan poin-poin fitur di atas dengan modul yang sudah diimplementasikan pada proyek Anda.*
-
 ---
 
 ## Teknologi & Tools yang Digunakan
