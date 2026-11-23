@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulir Pengujian Aplikasi (UAT) & Wawancara</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate-100 */
+        }
+
+        /* Pengaturan khusus saat dicetak (Print / Save as PDF) */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .print-card {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            /* Memastikan warna radio button dan badge tetap terlihat saat dicetak */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            textarea, input, select {
+                border-color: #94a3b8 !important;
+                background-color: #ffffff !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased py-6 px-4 sm:px-6 lg:px-8">
+
+    <!-- Toast Notifikasi (Pengganti alert() bawaan browser) -->
+    <div id="toast-container" class="no-print fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modal Konfirmasi Reset (Pengganti confirm() bawaan browser) -->
+    <div id="reset-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all">
+            <div class="flex items-center gap-3 text-rose-600 mb-3">
+                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">Reset Formulir UAT?</h3>
+            </div>
+            <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                Seluruh data yang sudah diisi dan tersimpan di browser akan dihapus permanen. Pastikan Anda sudah mencetak atau menyimpan PDF jika diperlukan.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="cancel-reset-btn" class="px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                    Batal
+                </button>
+                <button type="button" id="confirm-reset-btn" class="px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-colors">
+                    Ya, Kosongkan Form
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kontainer Utama -->
+    <main class="max-w-4xl mx-auto print-container">
+        
+        <!-- Header Banner Tema Emerald & Slate -->
+        <header class="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg mb-6 relative overflow-hidden print-card">
+            <!-- Aksen Dekoratif Emerald -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full -mr-20 -mt-20 pointer-events-none no-print"></div>
+            <div class="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/10 rounded-full -ml-16 -mb-16 pointer-events-none no-print"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold tracking-wide uppercase mb-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Quality Assurance & Evaluation
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                        Formulir Pengujian Aplikasi (UAT)
+                    </h1>
+                    <p class="text-slate-300 text-sm sm:text-base mt-1">
+                        Lembar Evaluasi Penerimaan Pengguna Akhir & Dokumentasi Wawancara Sistem
+                    </p>
+                </div>
+
+                <!-- Status Penyimpanan Otomatis -->
+                <div class="no-print self-start md:self-center">
+                    <div id="storage-status" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Siap diisi</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Action Bar Atas (Disembunyikan saat print) -->
+        <div class="no-print bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-6 flex flex-wrap items-center justify-between gap-3 sticky top-3 z-30 backdrop-blur-md bg-white/95">
+            <div class="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Gunakan tombol di samping untuk menyimpan atau mencetak</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                <button type="button" id="btn-reset" class="px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reset Form
+                </button>
+                <button type="button" id="btn-save" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-sm shadow-emerald-600/20 transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    Simpan Data
+                </button>
+                <button type="button" id="btn-print" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-sm transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Cetak Formulir Ini
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Utama -->
+        <form id="uat-form" class="space-y-6">
+
+            <!-- BAGIAN 1: Identitas Penguji & Responden -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden print-card">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200/80 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                        01
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Identitas Penguji & Responden</h2>
+                        <p class="text-xs text-slate-500">Informasi pelaksana pengujian dan profil pengguna akhir</p>
+                    </div>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Nama Penguji -->
+                    <div>
+                        <label for="nama_penguji" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Nama Penguji
+                        </label>
+                        <input type="text" id="nama_penguji" name="nama_penguji" placeholder="Nama lengkap penguji (QA)"
+                            class="w-full px-4 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                    </div>
+
+                    <!-- Tanggal Wawancara -->
+                    <div>
+                        <label for="tanggal_wawancara" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Tanggal Wawancara
+                        </label>
+                        <input type="date" id="tanggal_wawancara" name="tanggal_wawancara"
+                            class="w-full px-4 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                    </div>
+
+                    <!-- Nama Responden -->
+                    <div>
+                        <label for="nama_responden" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Nama Responden
+                        </label>
+                        <input type="text" id="nama_responden" name="nama_responden" placeholder="Nama pengguna akhir"
+                            class="w-full px-4 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                    </div>
+
+                    <!-- Peran Responden -->
+                    <div>
+                        <label for="peran_responden" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Peran Responden
+                        </label>
+                        <select id="peran_responden" name="peran_responden"
+                            class="w-full px-4 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                            <option value="">— Pilih peran —</option>
+                            <option value="Administrator">Administrator</option>
+                            <option value="Operator / Staf">Operator / Staf</option>
+                            <option value="Pengguna Umum / Pelanggan">Pengguna Umum / Pelanggan</option>
+                            <option value="Manajer / Pimpinan">Manajer / Pimpinan</option>
+                        </select>
+                    </div>
+
+                    <!-- Skenario UAT (Full Width di Grid) -->
+                    <div class="md:col-span-2">
+                        <label for="skenario_uat" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Skenario UAT
+                        </label>
+                        <select id="skenario_uat" name="skenario_uat"
+                            class="w-full px-4 py-2.5 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                            <option value="">— Pilih skenario —</option>
+                            <option value="Skenario 01 - Autentikasi & Hak Akses">Skenario 01 - Autentikasi & Hak Akses</option>
+                            <option value="Skenario 02 - Manajemen Data Master">Skenario 02 - Manajemen Data Master</option>
+                            <option value="Skenario 03 - Proses Transaksi Utama">Skenario 03 - Proses Transaksi Utama</option>
+                            <option value="Skenario 04 - Laporan & Ekspor Data">Skenario 04 - Laporan & Ekspor Data</option>
+                            <option value="Skenario 05 - Pengujian End-to-End">Skenario 05 - Pengujian End-to-End</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BAGIAN 2: Pertanyaan Wawancara (Layout Kartu Modern) -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden print-card">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200/80 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                        02
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Pertanyaan Wawancara</h2>
+                        <p class="text-xs text-slate-500">Evaluasi aspek fungsionalitas, antarmuka, dan kelayakan sistem</p>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    
+                    <!-- Pertanyaan 1 -->
+                    <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div class="flex items-start sm:items-center gap-3">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    Q1
+                                </span>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-800">
+                                    1. Apakah fitur dapat diakses dengan mudah?
+                                </h3>
+                            </div>
+                            <!-- Pilihan Radio -->
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q1_jawaban" value="Ya" class="accent-emerald-600 w-4 h-4">
+                                    <span>Ya</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q1_jawaban" value="Tidak" class="accent-rose-600 w-4 h-4">
+                                    <span>Tidak</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q1_jawaban" value="Sebagian" class="accent-amber-600 w-4 h-4">
+                                    <span>Sebagian</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pl-0 sm:pl-10">
+                            <label for="catatan_q1" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                Catatan Q1
+                            </label>
+                            <textarea id="catatan_q1" name="catatan_q1" rows="2" placeholder="Catatan responden..."
+                                class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Pertanyaan 2 -->
+                    <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div class="flex items-start sm:items-center gap-3">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    Q2
+                                </span>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-800">
+                                    2. Apakah hasil sesuai dengan kebutuhan?
+                                </h3>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q2_jawaban" value="Ya" class="accent-emerald-600 w-4 h-4">
+                                    <span>Ya</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q2_jawaban" value="Tidak" class="accent-rose-600 w-4 h-4">
+                                    <span>Tidak</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q2_jawaban" value="Sebagian" class="accent-amber-600 w-4 h-4">
+                                    <span>Sebagian</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pl-0 sm:pl-10">
+                            <label for="catatan_q2" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                Catatan Q2
+                            </label>
+                            <textarea id="catatan_q2" name="catatan_q2" rows="2" placeholder="Catatan responden..."
+                                class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Pertanyaan 3 -->
+                    <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div class="flex items-start sm:items-center gap-3">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    Q3
+                                </span>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-800">
+                                    3. Apakah tampilan mudah dipahami?
+                                </h3>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q3_jawaban" value="Ya" class="accent-emerald-600 w-4 h-4">
+                                    <span>Ya</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q3_jawaban" value="Tidak" class="accent-rose-600 w-4 h-4">
+                                    <span>Tidak</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q3_jawaban" value="Sebagian" class="accent-amber-600 w-4 h-4">
+                                    <span>Sebagian</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pl-0 sm:pl-10">
+                            <label for="catatan_q3" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                Catatan Q3
+                            </label>
+                            <textarea id="catatan_q3" name="catatan_q3" rows="2" placeholder="Catatan responden..."
+                                class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Pertanyaan 4 -->
+                    <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div class="flex items-start sm:items-center gap-3">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    Q4
+                                </span>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-800">
+                                    4. Apakah performa sistem memadai?
+                                </h3>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q4_jawaban" value="Ya" class="accent-emerald-600 w-4 h-4">
+                                    <span>Ya</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q4_jawaban" value="Tidak" class="accent-rose-600 w-4 h-4">
+                                    <span>Tidak</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q4_jawaban" value="Sebagian" class="accent-amber-600 w-4 h-4">
+                                    <span>Sebagian</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pl-0 sm:pl-10">
+                            <label for="catatan_q4" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                Catatan Q4
+                            </label>
+                            <textarea id="catatan_q4" name="catatan_q4" rows="2" placeholder="Catatan responden..."
+                                class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Pertanyaan 5 -->
+                    <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 transition-colors print-card">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div class="flex items-start sm:items-center gap-3">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    Q5
+                                </span>
+                                <h3 class="text-sm sm:text-base font-semibold text-slate-800">
+                                    5. Apakah sistem layak digunakan?
+                                </h3>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q5_jawaban" value="Ya" class="accent-emerald-600 w-4 h-4">
+                                    <span>Ya</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q5_jawaban" value="Tidak" class="accent-rose-600 w-4 h-4">
+                                    <span>Tidak</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-amber-400 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-800 transition-all text-sm font-medium">
+                                    <input type="radio" name="q5_jawaban" value="Sebagian" class="accent-amber-600 w-4 h-4">
+                                    <span>Sebagian</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pl-0 sm:pl-10">
+                            <label for="catatan_q5" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                Catatan Q5
+                            </label>
+                            <textarea id="catatan_q5" name="catatan_q5" rows="2" placeholder="Catatan responden..."
+                                class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"></textarea>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- BAGIAN 3: Keputusan & Saran -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden print-card">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200/80 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                        03
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Keputusan & Saran</h2>
+                        <p class="text-xs text-slate-500">Kesimpulan hasil uji penerimaan pengguna dan masukan pengembangan</p>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <!-- Keputusan UAT -->
+                    <div>
+                        <label for="keputusan_uat" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Keputusan UAT
+                        </label>
+                        <select id="keputusan_uat" name="keputusan_uat"
+                            class="w-full px-4 py-2.5 text-sm font-medium bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all">
+                            <option value="">— Pilih keputusan —</option>
+                            <option value="Diterima (Layak Digunakan)">Diterima (Layak Digunakan)</option>
+                            <option value="Diterima dengan Revisi Minor">Diterima dengan Revisi Minor</option>
+                            <option value="Ditolak (Perlu Perbaikan Mayor)">Ditolak (Perlu Perbaikan Mayor)</option>
+                        </select>
+                    </div>
+
+                    <!-- Saran Perbaikan -->
+                    <div>
+                        <label for="saran_perbaikan" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Saran Perbaikan
+                        </label>
+                        <textarea id="saran_perbaikan" name="saran_perbaikan" rows="4" placeholder="Saran dari responden..."
+                            class="w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all"></textarea>
+                    </div>
+                </div>
+            </section>
+
+        </form>
+
+        <!-- Kotak Petunjuk (Sembunyikan saat print dengan no-print / print:hidden) -->
+        <aside class="no-print print:hidden mt-6 bg-emerald-50/80 border-l-4 border-emerald-600 rounded-r-2xl rounded-l-md p-4 sm:p-5 shadow-sm">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <strong class="font-bold text-slate-900">Petunjuk:</strong> Isi formulir di atas, klik <strong class="font-semibold text-emerald-700">Simpan Data</strong> untuk menyimpan ke penyimpanan browser (localStorage), lalu <strong class="font-semibold text-slate-900">Cetak Formulir Ini</strong> untuk mencetak hanya formulir. Data akan dipulihkan otomatis saat halaman dibuka kembali.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Action Bar Bawah (Untuk kemudahan akses setelah selesai mengisi hingga bawah) -->
+        <div class="no-print print:hidden mt-6 flex flex-col sm:flex-row items-center justify-end gap-3 pb-8">
+            <button type="button" id="btn-reset-bottom" class="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-slate-600 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-300 hover:border-rose-300 rounded-xl transition-all">
+                Reset Form
+            </button>
+            <button type="button" id="btn-save-bottom" class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all">
+                Simpan Data
+            </button>
+            <button type="button" id="btn-print-bottom" class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-sm transition-all">
+                Cetak Formulir Ini
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Script Manajemen Data localStorage, Toast Notifikasi, & Cetak -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const STORAGE_KEY = 'uat_interview_form_data_v1';
+            const form = document.getElementById('uat-form');
+            const storageStatus = document.getElementById('storage-status');
+            const toastContainer = document.getElementById('toast-container');
+            const resetModal = document.getElementById('reset-modal');
+
+            // Fungsi menampilkan notifikasi toast halus
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                const isSuccess = type === 'success';
+                
+                toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${
+                    isSuccess 
+                        ? 'bg-slate-900 text-white border-emerald-500/40' 
+                        : 'bg-rose-600 text-white border-rose-400'
+                }`;
+
+                const icon = isSuccess
+                    ? `<svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+                    : `<svg class="w-5 h-5 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+
+                toast.innerHTML = `${icon}<span>${message}</span>`;
+                toastContainer.appendChild(toast);
+
+                // Animasi masuk
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                });
+
+                // Hapus otomatis setelah 3.2 detik
+                setTimeout(() => {
+                    toast.classList.add('translate-y-2', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3200);
+            }
+
+            // Update indikator status di header
+            function updateStatusIndicator(text, active = true) {
+                if (!storageStatus) return;
+                storageStatus.innerHTML = `
+                    <span class="w-2 h-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-400'}"></span>
+                    <span>${text}</span>
+                `;
+            }
+
+            // Fungsi menyimpan seluruh data form ke localStorage
+            function saveFormData(showNotification = true) {
+                try {
+                    const data = {};
+                    
+                    // Ambil semua input text, date, select, dan textarea
+                    const elements = form.querySelectorAll('input[type="text"], input[type="date"], select, textarea');
+                    elements.forEach(el => {
+                        if (el.name) {
+                            data[el.name] = el.value;
+                        }
+                    });
+
+                    // Ambil semua radio button yang terpilih
+                    const radioGroups = ['q1_jawaban', 'q2_jawaban', 'q3_jawaban', 'q4_jawaban', 'q5_jawaban'];
+                    radioGroups.forEach(groupName => {
+                        const checked = form.querySelector(`input[name="${groupName}"]:checked`);
+                        data[groupName] = checked ? checked.value : '';
+                    });
+
+                    data._lastSaved = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+                    updateStatusIndicator(`Tersimpan (${data._lastSaved})`, true);
+                    if (showNotification) {
+                        showToast('Data formulir berhasil disimpan ke browser!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Gagal menyimpan data ke localStorage:', error);
+                    showToast('Gagal menyimpan data ke penyimpanan browser.', 'error');
+                }
+            }
+
+            // Fungsi memulihkan data dari localStorage saat halaman dibuka
+            function restoreFormData() {
+                try {
+                    const savedRaw = localStorage.getItem(STORAGE_KEY);
+                    if (!savedRaw) return;
+
+                    const data = JSON.parse(savedRaw);
+
+                    // Pulihkan input text, date, select, textarea
+                    Object.keys(data).forEach(key => {
+                        if (key.startsWith('_')) return;
+
+                        // Cek apakah field adalah radio button
+                        const radios = form.querySelectorAll(`input[type="radio"][name="${key}"]`);
+                        if (radios.length > 0) {
+                            radios.forEach(radio => {
+                                radio.checked = (radio.value === data[key]);
+                            });
+                        } else {
+                            const field = form.querySelector(`[name="${key}"]`);
+                            if (field) {
+                                field.value = data[key];
+                            }
+                        }
+                    });
+
+                    if (data._lastSaved) {
+                        updateStatusIndicator(`Dipulihkan (${data._lastSaved})`, true);
+                    }
+                } catch (error) {
+                    console.error('Gagal memulihkan data:', error);
+                }
+            }
+
+            // Fungsi reset form dan hapus dari localStorage
+            function clearFormData() {
+                form.reset();
+                localStorage.removeItem(STORAGE_KEY);
+                updateStatusIndicator('Formulir dibersihkan', false);
+                resetModal.classList.add('hidden');
+                resetModal.classList.remove('flex');
+                showToast('Formulir dan data tersimpan telah dikosongkan.', 'error');
+            }
+
+            // Event Listeners Tombol Simpan (Atas & Bawah)
+            document.getElementById('btn-save').addEventListener('click', () => saveFormData(true));
+            document.getElementById('btn-save-bottom').addEventListener('click', () => saveFormData(true));
+
+            // Event Listeners Tombol Cetak (Atas & Bawah)
+            const handlePrint = () => {
+                // Simpan otomatis sebelum mencetak agar data terbaru aman
+                saveFormData(false);
+                window.print();
+            };
+            document.getElementById('btn-print').addEventListener('click', handlePrint);
+            document.getElementById('btn-print-bottom').addEventListener('click', handlePrint);
+
+            // Event Listeners Tombol Reset (Membuka Modal Konfirmasi)
+            const openResetModal = () => {
+                resetModal.classList.remove('hidden');
+                resetModal.classList.add('flex');
+            };
+            document.getElementById('btn-reset').addEventListener('click', openResetModal);
+            document.getElementById('btn-reset-bottom').addEventListener('click', openResetModal);
+
+            document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+                resetModal.classList.add('hidden');
+                resetModal.classList.remove('flex');
+            });
+
+            document.getElementById('confirm-reset-btn').addEventListener('click', clearFormData);
+
+            // Tutup modal jika klik di luar kotak dialog
+            resetModal.addEventListener('click', (e) => {
+                if (e.target === resetModal) {
+                    resetModal.classList.add('hidden');
+                    resetModal.classList.remove('flex');
+                }
+            });
+
+            // Auto-save ringan saat pengguna mengubah isian agar data tidak hilang jika tab tertutup mendadak
+            form.addEventListener('change', () => saveFormData(false));
+
+            // Pulihkan data saat halaman dimuat
+            restoreFormData();
+        });
+    </script>
+</body>
+</html>
