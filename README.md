@@ -50,4 +50,4 @@ RPL_Project/
 
 ## Akses Link
 
-[Buka Formulir Pengujian UAT](./docs/formulir_pengujian_aplikasi_uat.html)
+[Buka Formulir Pengujian UAT](https://Takaa057.gihub.io/docs/formulir_pengujian_aplikasi_uat.html)
